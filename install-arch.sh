@@ -131,7 +131,7 @@ setup_pacman(){
 
 install_base_apps(){
   arch-chroot /mnt/btrfs-current pacman -S --noconfirm sudo git gvim curl tmux zsh htop \
- openssh openssl dbus wget bc rsync wireless_tools wpa_supplicant wpa_actiond dialog
+ openssh openssl dbus wget bc rsync wireless_tools wpa_supplicant wpa_actiond dialog btrfs-progs
 }
 install_x(){
   # install xserver, common stuff
