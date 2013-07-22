@@ -11,6 +11,9 @@
 *.so.*
 *.dylib
 
+# Mac Turds
+.DS_Store
+
 # Executables
 *.exe
 *.out
