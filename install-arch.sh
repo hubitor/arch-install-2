@@ -31,7 +31,7 @@ setup_btrfs(){
   # format and mount btrfs root
   mkfs.btrfs -f -L "Arch Linux" $device
   mkdir /mnt/btrfs-root
-  mount -o defaults,relatime,discard,ssd $device /mnt/btrfs-root
+  mount -o defaults,relatime,discard,ssd,compress=lzo,autodefrag $device /mnt/btrfs-root
 
   # setup btrfs layout/subvolumes
   mkdir -p /mnt/btrfs-root/__snapshot
@@ -50,12 +50,12 @@ mount_subvol(){
   # mount the other subvolumes on the corresponding mount points
   for sub in "$@" ; do
 	mkdir -p /mnt/btrfs-current/$sub
-    mount -o defaults,relatime,discard,ssd,nodev,nosuid,compress=lzo,subvol=__current/$sub $device /mnt/btrfs-current/$sub
+    mount -o defaults,relatime,discard,ssd,nodev,nosuid,compress=lzo,autodefrag,subvol=__current/$sub $device /mnt/btrfs-current/$sub
   done
   
   # var/lib is special
   #mkdir -p /mnt/btrfs-current/var/lib
-  #mount -o defaults,relatime,discard,ssd,nodev,nosuid,compress=lzo,subvol=__current/var $device /mnt/btrfs-current/var
+  #mount -o defaults,relatime,discard,ssd,nodev,nosuid,compress=lzo,autodefrag,subvol=__current/var $device /mnt/btrfs-current/var
   #mkdir -p /mnt/btrfs-current/var/lib
   #mount --bind /mnt/btrfs-root/__current/ROOT/var/lib /mnt/btrfs-current/var/lib  
   #pause
@@ -101,7 +101,7 @@ add_encrypt_hook(){
 setup_grub(){
   local encrypt=$1 root=$2
   if $encrypt ; then
-    sed -i '/GRUB_CMDLINE_LINUX=/ c\GRUB_CMDLINE_LINUX="cryptdevice=${root}:cryptroot:allow-discards"' /mnt/btrfs-current/etc/default/grub
+    sed -i '/GRUB_CMDLINE_LINUX=/ c\GRUB_CMDLINE_LINUX="cryptdevice=/dev/sda3:cryptroot:allow-discards"' /mnt/btrfs-current/etc/default/grub
   fi
 
   arch-chroot /mnt/btrfs-current grub-install --target=i386-pc --recheck /dev/sda
@@ -150,10 +150,10 @@ install_gnome(){
 
 install_apps(){
   arch-chroot /mnt/btrfs-current pacman -S --noconfirm cpupower \
-chromium rdesktop nss vlc bash-completion pm-utils \
-	  laptop-mode-tools hdparm gvim meld \
-			avahi nss-mdns fuse libva-intel-driver ntp deja-dup \
-				  cups cronie
+  chromium rdesktop nss vlc bash-completion pm-utils \
+  laptop-mode-tools hdparm gvim meld \
+  avahi nss-mdns fuse libva-intel-driver ntp deja-dup \
+  cups cronie
 }
 
 #dot_init
