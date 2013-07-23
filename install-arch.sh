@@ -52,12 +52,12 @@ mount_subvol(){
 	mkdir -p /mnt/btrfs-current/$sub
     mount -o defaults,relatime,discard,ssd,nodev,nosuid,compress=lzo,autodefrag,subvol=__current/$sub $device /mnt/btrfs-current/$sub
   done
-  
+
   # var/lib is special
-  #mkdir -p /mnt/btrfs-current/var/lib
-  #mount -o defaults,relatime,discard,ssd,nodev,nosuid,compress=lzo,autodefrag,subvol=__current/var $device /mnt/btrfs-current/var
-  #mkdir -p /mnt/btrfs-current/var/lib
-  #mount --bind /mnt/btrfs-root/__current/ROOT/var/lib /mnt/btrfs-current/var/lib  
+  mkdir -p /mnt/btrfs-current/var/lib
+  mount -o defaults,relatime,discard,ssd,nodev,nosuid,compress=lzo,autodefrag,subvol=__current/var $device /mnt/btrfs-current/var
+  mkdir -p /mnt/btrfs-current/var/lib
+  mount --bind /mnt/btrfs-root/__current/ROOT/var/lib /mnt/btrfs-current/var/lib
   #pause
 }
 
@@ -79,6 +79,10 @@ bootstrap_arch(){
   echo "bootstrap"
   pacstrap /mnt/btrfs-current base base-devel grub-bios os-prober mtools gptfdisk
   genfstab -U -p /mnt/btrfs-current >> /mnt/btrfs-current/etc/fstab
+  echo "adding special handling for /var/lib"
+  echo "#UUID=...	/run/btrfs-root	btrfs rw,nodev,nosuid,noexec,relatime,ssd,discard,space_cache 0 0" >> /mnt/btrfs-current/etc/fstab
+  echo "#/run/btrfs-root/__current/ROOT/var/lib		/var/lib	none bind " >> /mnt/btrfs-current/etc/fstab
+  vi /mnt/btrfs-current/etc/fstab
 
   read -p "hostname:(arch)" hostname
   if [[ -z "$hostname" ]]; then
