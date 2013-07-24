@@ -54,7 +54,7 @@ mount_subvol(){
   done
 
   # var/lib is special
-  mkdir -p /mnt/btrfs-current/var/lib
+  mkdir -p /mnt/btrfs-root/__current/ROOT/var/lib
   mount -o defaults,relatime,discard,ssd,nodev,nosuid,compress=lzo,autodefrag,subvol=__current/var $device /mnt/btrfs-current/var
   mkdir -p /mnt/btrfs-current/var/lib
   mount --bind /mnt/btrfs-root/__current/ROOT/var/lib /mnt/btrfs-current/var/lib
