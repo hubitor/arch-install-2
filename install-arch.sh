@@ -81,7 +81,7 @@ bootstrap_arch(){
   genfstab -U -p /mnt/btrfs-current >> /mnt/btrfs-current/etc/fstab
   echo "adding special handling for /var/lib"
   echo "#UUID=...	/run/btrfs-root	btrfs rw,nodev,nosuid,noexec,relatime,ssd,discard,space_cache 0 0" >> /mnt/btrfs-current/etc/fstab
-  echo "#/run/btrfs-root/__current/ROOT/var/lib		/var/lib	none bind " >> /mnt/btrfs-current/etc/fstab
+  echo "#/run/btrfs-root/__current/ROOT/var/lib		/var/lib	none bind 0 0" >> /mnt/btrfs-current/etc/fstab
   vi /mnt/btrfs-current/etc/fstab
 
   read -p "hostname:(arch)" hostname
@@ -271,6 +271,7 @@ fi
 umount /mnt/btrfs-current/boot
 umount /mnt/btrfs-current/home
 umount /mnt/btrfs-current/opt
+umount /mnt/btrfs-current/var/lib
 umount /mnt/btrfs-current/var
 umount /mnt/btrfs-current/data
 umount /mnt/btrfs-current/
