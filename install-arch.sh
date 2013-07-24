@@ -105,7 +105,7 @@ add_encrypt_hook(){
 setup_grub(){
   local encrypt=$1 root=$2
   if $encrypt ; then
-    sed -i '/GRUB_CMDLINE_LINUX=/ c\GRUB_CMDLINE_LINUX="cryptdevice=/dev/sda3:cryptroot:allow-discards"' /mnt/btrfs-current/etc/default/grub
+    sed -i "/GRUB_CMDLINE_LINUX=/ c\GRUB_CMDLINE_LINUX=\\\"cryptdevice=${root}:cryptroot:allow-discards\\\"" /mnt/btrfs-current/etc/default/grub
   fi
 
   arch-chroot /mnt/btrfs-current grub-install --target=i386-pc --recheck /dev/sda
@@ -113,15 +113,18 @@ setup_grub(){
 }
 
 setup_aur(){
-  local tmp_dir=/opt/tmp
+  local proxy=$1 tmp_dir=/opt/tmp
   mkdir -p /mnt/btrfs-current/$tmp_dir
-  wget -O /mnt/btrfs-current/$tmp_dir/aur.sh http://bit.ly/arch_aur
+  wget -O /mnt/btrfs-current/$tmp_dir/aur.sh https://raw.github.com/seanvk/arch-install/master/aur.sh
   arch-chroot /mnt/btrfs-current pacman -S --noconfirm expac yajl
-  wget -O /mnt/btrfs-current/$tmp_dir/cower.tar.gz https://aur.archlinux.org/packages/co/cower/cower.tar.gz
+  if $proxy ; then
+    wget -O /mnt/btrfs-current/$tmp_dir/cower.tar.gz https://raw.github.com/seanvk/arch-install/master/cower.tar.gz
+    wget -O /mnt/btrfs-current/$tmp_dir/packer.tar.gz https://raw.github.com/seanvk/arch-install/master/packer.tar.gz
+  else
+    wget -O /mnt/btrfs-current/$tmp_dir/cower.tar.gz https://aur.archlinux.org/packages/co/cower/cower.tar.gz
+    wget -O /mnt/btrfs-current/$tmp_dir/packer.tar.gz https://aur.archlinux.org/packages/pa/packer/packer.tar.gz
+  fi
   arch-chroot /mnt/btrfs-current sh $tmp_dir/aur.sh cower
-  wget -O /mnt/btrfs-current/$tmp_dir/pacaur.tar.gz https://aur.archlinux.org/packages/pa/pacaur/pacaur.tar.gz
-  arch-chroot /mnt/btrfs-current sh $tmp_dir/aur.sh pacaur
-  wget -O /mnt/btrfs-current/$tmp_dir/packer.tar.gz https://aur.archlinux.org/packages/pa/packer/packer.tar.gz
   arch-chroot /mnt/btrfs-current sh $tmp_dir/aur.sh packer
   rm -r /mnt/btrfs-current/$tmp_dir
 }
@@ -129,7 +132,7 @@ setup_aur(){
 setup_pacman(){
   arch-chroot /mnt/btrfs-current pacman -S --noconfirm reflector
   arch-chroot /mnt/btrfs-current reflector -f 6 -l 6 --save /etc/pacman.d/mirrorlist
-  arch-chroot /mnt/btrfs-current pacaur -S powerpill --asroot
+  arch-chroot /mnt/btrfs-current packer -S powerpill
   arch-chroot /mnt/btrfs-current pacman -Syy
 }
 
@@ -160,26 +163,6 @@ install_apps(){
   cups cronie
 }
 
-#dot_init
-##!/bin/bash
-
-#user=$1
-#DIR=/opt/dot-files
-#git clone -b fish git@bitbucket.org:sch1zo/dot-files.git $DIR
-#cd $DIR
-#git submodule update --init
-#
-#cp $DIR/.* /home/$user -r
-#chown $user:users /home/$user -R
-
-get_dotfiles(){
-  local tmp_dir=/opt/tmp
-  mkdir -p /mnt/btrfs-current/$tmp_dir
-  wget -O /mnt/btrfs-current/$tmp_dir/fetch_dotfiles.sh http://bit.ly/dot_init
-  arch-chroot /mnt/btrfs-current sh $tmp_dir/fetch_dotfiles.sh $1
-  rm -r /mnt/btrfs-current/$tmp_dir
-}
-
 setup_users(){
   echo "set rootpw:"
   arch-chroot /mnt/btrfs-current passwd
@@ -192,7 +175,6 @@ setup_users(){
   echo "set user pw:"
   arch-chroot /mnt/btrfs-current passwd $user
   arch-chroot /mnt/btrfs-current visudo
-  #get_dotfiles $user
 }
 
 enable_services(){
@@ -210,17 +192,23 @@ enable_services(){
 
 # get some stuff from aur
 install_aur_pkgs(){
-  arch-chroot /mnt/btrfs-current pacaur -S --asroot sublime-text-nightly dropbox lastpass-pocket
+  arch-chroot /mnt/btrfs-current packer -S sublime-text-nightly dropbox lastpass-pocket
 }
 install_zramswap(){
-  arch-chroot /mnt/btrfs-current pacaur -S --asroot zramswap
+  arch-chroot /mnt/btrfs-current packer -S zramswap
   arch-chroot /mnt/btrfs-current systemctl enable zramswap.service
 }
 
-# optimize performance
-# swappiness
-#echo "vm.swappiness=20" >> /mnt/btrfs-current/etc/sysctl.conf
-#echo "vm.vfs_cache_pressure=50" >> /mnt/btrfs-current/etc/sysctl.conf
+read -p "proxy? (y/N)?"
+if [[ $REPLY == [yY] ]] ; then
+  echo "use proxy"
+  proxy=true
+  read -p "http_proxy:" http_proxy
+else
+  echo "no proxy"
+  proxy=false
+  http_proxy=
+fi
 
 read -p "boot device(/dev/sda2):" boot_device
 if [[ -z "$boot_device" ]]; then
@@ -255,7 +243,7 @@ if $encrypt ; then
   add_encrypt_hook
 fi
 setup_grub $encrypt $root_raw
-setup_aur
+setup_aur $encrypt
 setup_pacman
 install_base_apps
 setup_users
@@ -283,7 +271,6 @@ fi
 umount /mnt/btrfs-current/boot
 umount /mnt/btrfs-current/home
 umount /mnt/btrfs-current/opt
-#umount /mnt/btrfs-current/var/lib
 umount /mnt/btrfs-current/var
 umount /mnt/btrfs-current/data
 umount /mnt/btrfs-current/
