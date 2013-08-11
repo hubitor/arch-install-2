@@ -121,14 +121,14 @@ setup_grub(){
 setup_aur(){
   local proxy=$1 tmp_dir=/opt/tmp
   mkdir -p /mnt/btrfs-current/$tmp_dir
-  wget -O /mnt/btrfs-current/$tmp_dir/aur.sh https://raw.github.com/seanvk/arch-install/master/aur.sh
+  wget --no-check-certificate -O /mnt/btrfs-current/$tmp_dir/aur.sh https://raw.github.com/seanvk/arch-install/master/aur.sh
   arch-chroot /mnt/btrfs-current pacman -S --noconfirm expac yajl
   if $proxy ; then
-    wget -O /mnt/btrfs-current/$tmp_dir/cower.tar.gz https://raw.github.com/seanvk/arch-install/master/cower.tar.gz
-    wget -O /mnt/btrfs-current/$tmp_dir/packer.tar.gz https://raw.github.com/seanvk/arch-install/master/packer.tar.gz
+    wget --no-check-certificate -O /mnt/btrfs-current/$tmp_dir/cower.tar.gz https://raw.github.com/seanvk/arch-install/master/cower.tar.gz
+    wget --no-check-certificate -O /mnt/btrfs-current/$tmp_dir/packer.tar.gz https://raw.github.com/seanvk/arch-install/master/packer.tar.gz
   else
-    wget -O /mnt/btrfs-current/$tmp_dir/cower.tar.gz https://aur.archlinux.org/packages/co/cower/cower.tar.gz
-    wget -O /mnt/btrfs-current/$tmp_dir/packer.tar.gz https://aur.archlinux.org/packages/pa/packer/packer.tar.gz
+    wget --no-check-certificate -O /mnt/btrfs-current/$tmp_dir/cower.tar.gz https://aur.archlinux.org/packages/co/cower/cower.tar.gz
+    wget --no-check-certificate -O /mnt/btrfs-current/$tmp_dir/packer.tar.gz https://aur.archlinux.org/packages/pa/packer/packer.tar.gz
   fi
   arch-chroot /mnt/btrfs-current sh $tmp_dir/aur.sh cower
   arch-chroot /mnt/btrfs-current sh $tmp_dir/aur.sh packer
@@ -209,17 +209,25 @@ read -p "proxy? (y/N)?"
 if [[ $REPLY == [yY] ]] ; then
   echo "use proxy"
   proxy=true
-  read -p "http_proxy:" http_proxy
+  read -p "http_proxy:" http_proxy_field
+  read -p "https_proxy:" https_proxy_field
 else
   echo "no proxy"
   proxy=false
-  http_proxy=
+  http_proxy_field=
+  https_proxy_field=
 fi
 
+<<<<<<< HEAD
 read -p "efi device(/dev/sda1):" boot_device
 if [[ -z "$efi_device" ]]; then
   efi_device='/dev/sda1'
 fi
+=======
+export http_proxy=${http_proxy_field}
+export https_proxy=${https_proxy_field}
+
+>>>>>>> 934a0f2e25df4a62cc30367714ffb42681614841
 
 read -p "boot device(/dev/sda2):" boot_device
 if [[ -z "$boot_device" ]]; then
@@ -256,7 +264,7 @@ else
   arch-chroot /mnt/btrfs-current mkinitcpio -p linux
 fi
 setup_grub $encrypt $root_raw
-setup_aur $encrypt
+setup_aur $proxy
 setup_pacman
 install_base_apps
 setup_users
