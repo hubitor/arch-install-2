@@ -277,10 +277,10 @@ else
   arch-chroot /mnt/btrfs-current systemctl enable dhcpcd.service
 fi
 
-read -p "zramswap? (y/N)?"
-if [[ $REPLY == [yY] ]] ; then
-  install_zramswap
-fi
+#read -p "zramswap? (y/N)?"
+#if [[ $REPLY == [yY] ]] ; then
+#  install_zramswap
+#fi
 
 read -p "umount?(Y/n)?"
 if [[ $REPLY == [nN] ]] ; then
