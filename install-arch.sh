@@ -218,16 +218,13 @@ else
   https_proxy_field=
 fi
 
-<<<<<<< HEAD
+export http_proxy=${http_proxy_field}
+export https_proxy=${https_proxy_field}
+
 read -p "efi device(/dev/sda1):" boot_device
 if [[ -z "$efi_device" ]]; then
   efi_device='/dev/sda1'
 fi
-=======
-export http_proxy=${http_proxy_field}
-export https_proxy=${https_proxy_field}
-
->>>>>>> 934a0f2e25df4a62cc30367714ffb42681614841
 
 read -p "boot device(/dev/sda2):" boot_device
 if [[ -z "$boot_device" ]]; then
