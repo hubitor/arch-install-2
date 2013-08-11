@@ -29,9 +29,9 @@ setup_LUKS(){
 setup_btrfs(){
   local device=$1 ; shift 1
   # format and mount btrfs root
-  mkfs.btrfs -f -L "Arch Linux" $device
+  mkfs.btrfs -f -L "ArchLinux" $device
   mkdir /mnt/btrfs-root
-  mount -o defaults,relatime,discard,ssd,compress=lzo,autodefrag $device /mnt/btrfs-root
+  mount -o defaults,relatime,discard,ssd,autodefrag $device /mnt/btrfs-root
 
   # setup btrfs layout/subvolumes
   mkdir -p /mnt/btrfs-root/__snapshot
@@ -64,20 +64,23 @@ mount_subvol(){
 setup_boot(){
   # format and mount /boot
   mkfs.ext4 $1
+  mkfs.vfat -F32 $2
   mkdir -p /mnt/btrfs-current/boot
-  mount $1 /mnt/btrfs-current/boot
+  mount $1 /mnt/btrfs-current/boot 
+  mkdir -p /mnt/btrfs-current/boot/efi
+  mount $2 /mnt/btrfs-current/boot/efi
 }
 
 make_fs(){
   echo "make_fs"
   setup_btrfs $2 ROOT home opt var data
-  mount_subvol $2 home opt data var
-  setup_boot $1
+  mount_subvol $2 home opt data
+  setup_boot $1 $3
 }
 
 bootstrap_arch(){
   echo "bootstrap"
-  pacstrap /mnt/btrfs-current base base-devel grub-bios os-prober mtools gptfdisk
+  pacstrap /mnt/btrfs-current base base-devel grub efibootmgr os-prober mtools gptfdisk
   genfstab -U -p /mnt/btrfs-current >> /mnt/btrfs-current/etc/fstab
   echo "adding special handling for /var/lib"
   echo "#UUID=...	/run/btrfs-root	btrfs rw,nodev,nosuid,noexec,relatime,ssd,discard,space_cache 0 0" >> /mnt/btrfs-current/etc/fstab
@@ -107,9 +110,12 @@ setup_grub(){
   if $encrypt ; then
     sed -i "/GRUB_CMDLINE_LINUX=/ c\GRUB_CMDLINE_LINUX=\\\"cryptdevice=${root}:cryptroot:allow-discards\\\"" /mnt/btrfs-current/etc/default/grub
   fi
-
-  arch-chroot /mnt/btrfs-current grub-install --target=i386-pc --recheck /dev/sda
-  arch-chroot /mnt/btrfs-current grub-mkconfig -o /boot/grub/grub.cfg
+  arch-chroot /mnt/btrfs-current modprobe efivars
+  arch-chroot /mnt/btrfs-current modprobe dm-mod
+  arch-chroot /mnt/btrfs-current grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=arch_grub --boot-directory=/boot/efi/EFI --recheck --debug
+  arch-chroot /mnt/btrfs-current grub-mkconfig -o /boot/efi/EFI/grub/grub.cfg
+  arch-chroot /mnt/btrfs-current mkdir -p /boot/efi/EFI/boot
+  arch-chroot /mnt/btrfs-current cp /boot/efi/EFI/arch_grub/grubx64.efi /boot/efi/EFI/boot/bootx64.efi
 }
 
 setup_aur(){
@@ -210,6 +216,11 @@ else
   http_proxy=
 fi
 
+read -p "efi device(/dev/sda1):" boot_device
+if [[ -z "$efi_device" ]]; then
+  efi_device='/dev/sda1'
+fi
+
 read -p "boot device(/dev/sda2):" boot_device
 if [[ -z "$boot_device" ]]; then
   boot_device='/dev/sda2'
@@ -236,11 +247,13 @@ if $encrypt ; then
 fi
 echo "boot: $boot_device | root: $root_device"
 
-make_fs $boot_device $root_device
+make_fs $boot_device $root_device $efi_device
 refresh_pacman
 bootstrap_arch
 if $encrypt ; then
   add_encrypt_hook
+else
+  arch-chroot /mnt/btrfs-current mkinitcpio -p linux
 fi
 setup_grub $encrypt $root_raw
 setup_aur $encrypt
@@ -268,6 +281,7 @@ read -p "umount?(Y/n)?"
 if [[ $REPLY == [nN] ]] ; then
   exit 0
 fi
+umount /mnt/btrfs-current/boot/efi
 umount /mnt/btrfs-current/boot
 umount /mnt/btrfs-current/home
 umount /mnt/btrfs-current/opt
