@@ -31,7 +31,7 @@ setup_btrfs(){
   # format and mount btrfs root
   mkfs.btrfs -f -L "ArchLinux" $device
   mkdir /mnt/btrfs-root
-  mount -o defaults,relatime,discard,ssd,autodefrag $device /mnt/btrfs-root
+  mount -o defaults,relatime,discard,ssd,compress=lzo,autodefrag $device /mnt/btrfs-root
 
   # setup btrfs layout/subvolumes
   mkdir -p /mnt/btrfs-root/__snapshot
