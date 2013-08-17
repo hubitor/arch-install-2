@@ -205,6 +205,9 @@ install_zramswap(){
   arch-chroot /mnt/btrfs-current systemctl enable zramswap.service
 }
 
+modprobe efivars
+modprobe dm-mod
+
 read -p "proxy? (y/N)?"
 if [[ $REPLY == [yY] ]] ; then
   echo "use proxy"
@@ -281,6 +284,14 @@ fi
 #if [[ $REPLY == [yY] ]] ; then
 #  install_zramswap
 #fi
+
+# manually install efivars
+#pause
+#umount /sys/firmware/efi
+#modprobe -r efivars
+#modprobe efivars
+#modprobe dm-mod
+#efibootmgr -q -c -d /dev/sda -p 1 -w -L arch_grub -l '\EFI\arch_grub\grubx64.efi'
 
 read -p "umount?(Y/n)?"
 if [[ $REPLY == [nN] ]] ; then
