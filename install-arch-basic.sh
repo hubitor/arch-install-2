@@ -31,7 +31,7 @@ setup_btrfs(){
   # format and mount btrfs root
   mkfs.btrfs -f -L "ArchLinux" $device
   mkdir /mnt/btrfs-root
-  mount -o defaults,relatime,discard,ssd,autodefrag $device /mnt/btrfs-root
+  mount -o defaults,relatime $device /mnt/btrfs-root
 
   # setup btrfs layout/subvolumes
   mkdir -p /mnt/btrfs-root/__snapshot
@@ -45,17 +45,17 @@ mount_subvol(){
 # mount __current/ROOT and create the mount points for mounting the other subvolumes
   local device=$1 ; shift 1
   mkdir -p /mnt/btrfs-current
-  mount -o defaults,relatime,discard,ssd,nodev,compress=lzo,subvol=__current/ROOT $device /mnt/btrfs-current
+  mount -o defaults,relatime,nodev,subvol=__current/ROOT $device /mnt/btrfs-current
 
   # mount the other subvolumes on the corresponding mount points
   for sub in "$@" ; do
 	mkdir -p /mnt/btrfs-current/$sub
-    mount -o defaults,relatime,discard,ssd,nodev,nosuid,compress=lzo,autodefrag,subvol=__current/$sub $device /mnt/btrfs-current/$sub
+    mount -o defaults,relatime,nodev,nosuid,subvol=__current/$sub $device /mnt/btrfs-current/$sub
   done
 
   # var/lib is special
   mkdir -p /mnt/btrfs-root/__current/ROOT/var/lib
-  mount -o defaults,relatime,discard,ssd,nodev,nosuid,compress=lzo,autodefrag,subvol=__current/var $device /mnt/btrfs-current/var
+  mount -o defaults,relatime,subvol=__current/var $device /mnt/btrfs-current/var
   mkdir -p /mnt/btrfs-current/var/lib
   mount --bind /mnt/btrfs-root/__current/ROOT/var/lib /mnt/btrfs-current/var/lib
   #pause
@@ -63,16 +63,19 @@ mount_subvol(){
 
 setup_boot(){
   # format and mount /boot
-  mkfs.vfat -F32 $1
+  mkfs.ext4 $1
+  mkfs.vfat -F32 $2
   mkdir -p /mnt/btrfs-current/boot
   mount $1 /mnt/btrfs-current/boot 
+  mkdir -p /mnt/btrfs-current/boot/efi
+  mount $2 /mnt/btrfs-current/boot/efi
 }
 
 make_fs(){
   echo "make_fs"
   setup_btrfs $2 ROOT home opt var data
   mount_subvol $2 home opt data
-  setup_boot $1
+  setup_boot $1 $3
 }
 
 bootstrap_arch(){
@@ -80,7 +83,7 @@ bootstrap_arch(){
   pacstrap /mnt/btrfs-current base base-devel grub efibootmgr os-prober mtools gptfdisk
   genfstab -U -p /mnt/btrfs-current >> /mnt/btrfs-current/etc/fstab
   echo "adding special handling for /var/lib"
-  echo "#UUID=...	/run/btrfs-root	btrfs rw,nodev,nosuid,noexec,relatime,ssd,discard,space_cache 0 0" >> /mnt/btrfs-current/etc/fstab
+  echo "#UUID=...	/run/btrfs-root	btrfs rw,nodev,nosuid,noexec,relatime,space_cache 0 0" >> /mnt/btrfs-current/etc/fstab
   echo "#/run/btrfs-root/__current/ROOT/var/lib		/var/lib	none bind 0 0" >> /mnt/btrfs-current/etc/fstab
   vi /mnt/btrfs-current/etc/fstab
 
@@ -109,25 +112,24 @@ setup_grub(){
   fi
   arch-chroot /mnt/btrfs-current modprobe efivars
   arch-chroot /mnt/btrfs-current modprobe dm-mod
-  arch-chroot /mnt/btrfs-current grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=arch_grub --boot-directory=/boot/EFI --recheck --debug
+  arch-chroot /mnt/btrfs-current grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=arch_grub --boot-directory=/boot/efi/EFI --recheck --debug
   pause
-  arch-chroot /mnt/btrfs-current grub-mkconfig -o /boot/EFI/grub/grub.cfg
-  pause
-  arch-chroot /mnt/btrfs-current mkdir -p /boot/EFI/boot
-  arch-chroot /mnt/btrfs-current cp /boot/EFI/arch_grub/grubx64.efi /boot/EFI/boot/bootx64.efi
+  arch-chroot /mnt/btrfs-current grub-mkconfig -o /boot/efi/EFI/grub/grub.cfg
+  arch-chroot /mnt/btrfs-current mkdir -p /boot/efi/EFI/boot
+  arch-chroot /mnt/btrfs-current cp /boot/efi/EFI/arch_grub/grubx64.efi /boot/efi/EFI/boot/bootx64.efi
 }
 
 setup_aur(){
   local proxy=$1 tmp_dir=/opt/tmp
   mkdir -p /mnt/btrfs-current/$tmp_dir
-  wget -O /mnt/btrfs-current/$tmp_dir/aur.sh https://raw.github.com/seanvk/arch-install/master/aur.sh
+  wget --no-check-certificate -O /mnt/btrfs-current/$tmp_dir/aur.sh https://raw.github.com/seanvk/arch-install/master/aur.sh
   arch-chroot /mnt/btrfs-current pacman -S --noconfirm expac yajl
   if $proxy ; then
-    wget -O /mnt/btrfs-current/$tmp_dir/cower.tar.gz https://raw.github.com/seanvk/arch-install/master/cower.tar.gz
-    wget -O /mnt/btrfs-current/$tmp_dir/packer.tar.gz https://raw.github.com/seanvk/arch-install/master/packer.tar.gz
+    wget --no-check-certificate -O /mnt/btrfs-current/$tmp_dir/cower.tar.gz https://raw.github.com/seanvk/arch-install/master/cower.tar.gz
+    wget --no-check-certificate -O /mnt/btrfs-current/$tmp_dir/packer.tar.gz https://raw.github.com/seanvk/arch-install/master/packer.tar.gz
   else
-    wget -O /mnt/btrfs-current/$tmp_dir/cower.tar.gz https://aur.archlinux.org/packages/co/cower/cower.tar.gz
-    wget -O /mnt/btrfs-current/$tmp_dir/packer.tar.gz https://aur.archlinux.org/packages/pa/packer/packer.tar.gz
+    wget --no-check-certificate -O /mnt/btrfs-current/$tmp_dir/cower.tar.gz https://aur.archlinux.org/packages/co/cower/cower.tar.gz
+    wget --no-check-certificate -O /mnt/btrfs-current/$tmp_dir/packer.tar.gz https://aur.archlinux.org/packages/pa/packer/packer.tar.gz
   fi
   arch-chroot /mnt/btrfs-current sh $tmp_dir/aur.sh cower
   arch-chroot /mnt/btrfs-current sh $tmp_dir/aur.sh packer
@@ -208,22 +210,31 @@ read -p "proxy? (y/N)?"
 if [[ $REPLY == [yY] ]] ; then
   echo "use proxy"
   proxy=true
-  read -p "http_proxy:" http_proxy
+  read -p "http_proxy:" http_proxy_field
+  read -p "https_proxy:" https_proxy_field
 else
   echo "no proxy"
   proxy=false
-  http_proxy=
+  http_proxy_field=
+  https_proxy_field=
 fi
 
+export http_proxy=${http_proxy_field}
+export https_proxy=${https_proxy_field}
 
-read -p "boot device(/dev/sda1):" boot_device
+read -p "efi device(/dev/sda1):" boot_device
+if [[ -z "$efi_device" ]]; then
+  efi_device='/dev/sda1'
+fi
+
+read -p "boot device(/dev/sda2):" boot_device
 if [[ -z "$boot_device" ]]; then
-  boot_device='/dev/sda1'
+  boot_device='/dev/sda2'
 fi
 
-read -p "root device(/dev/sda2):" root_device
+read -p "root device(/dev/sda3):" root_device
 if [[ -z "$root_device" ]]; then
-  root_device='/dev/sda2'
+  root_device='/dev/sda3'
 fi
 root_raw=$root_device
 
@@ -242,7 +253,7 @@ if $encrypt ; then
 fi
 echo "boot: $boot_device | root: $root_device"
 
-make_fs $boot_device $root_device
+make_fs $boot_device $root_device $efi_device
 refresh_pacman
 bootstrap_arch
 if $encrypt ; then
@@ -251,7 +262,7 @@ else
   arch-chroot /mnt/btrfs-current mkinitcpio -p linux
 fi
 setup_grub $encrypt $root_raw
-setup_aur $encrypt
+setup_aur $proxy
 setup_pacman
 install_base_apps
 setup_users
@@ -276,6 +287,7 @@ read -p "umount?(Y/n)?"
 if [[ $REPLY == [nN] ]] ; then
   exit 0
 fi
+umount /mnt/btrfs-current/boot/efi
 umount /mnt/btrfs-current/boot
 umount /mnt/btrfs-current/home
 umount /mnt/btrfs-current/opt
