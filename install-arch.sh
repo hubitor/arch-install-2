@@ -224,7 +224,7 @@ fi
 export http_proxy=${http_proxy_field}
 export https_proxy=${https_proxy_field}
 
-read -p "efi device(/dev/sda1):" boot_device
+read -p "efi device(/dev/sda1):" efi_device
 if [[ -z "$efi_device" ]]; then
   efi_device='/dev/sda1'
 fi

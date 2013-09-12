@@ -46,7 +46,6 @@ mount_subvol(){
   local device=$1 ; shift 1
   mkdir -p /mnt/btrfs-current
   mount -o defaults,relatime,discard,ssd,nodev,compress=lzo,subvol=__root $device /mnt/btrfs-current
-  pause
   # mount the other subvolumes on the corresponding mount points
   for sub in "$@" ; do
 	mkdir -p /mnt/btrfs-current/$sub
@@ -58,7 +57,7 @@ mount_subvol(){
   mount -o defaults,relatime,discard,ssd,nodev,nosuid,compress=lzo,autodefrag,subvol=__root/var $device /mnt/btrfs-current/var
   mkdir -p /mnt/btrfs-current/var/lib
   mount --bind /mnt/btrfs-root/__root/var/lib /mnt/btrfs-current/var/lib
-  pause
+  #pause
 }
 
 setup_boot(){
@@ -222,7 +221,7 @@ fi
 export http_proxy=${http_proxy_field}
 export https_proxy=${https_proxy_field}
 
-read -p "efi device(/dev/sda1):" boot_device
+read -p "efi device(/dev/sda1):" efi_device
 if [[ -z "$efi_device" ]]; then
   efi_device='/dev/sda1'
 fi
@@ -290,7 +289,6 @@ modprobe efivars
 modprobe dm-mod
 efibootmgr -q -c -d /dev/sda -p 1 -w -L 'rEFInd' -l '\EFI\refind\refind_x64.efi'
 
-pause
 read -p "umount?(Y/n)?"
 if [[ $REPLY == [nN] ]] ; then
   exit 0
