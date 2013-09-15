@@ -104,15 +104,19 @@ add_encrypt_hook(){
   arch-chroot /mnt/btrfs-current mkinitcpio -p linux
 }
 
-setup_grub(){
+setup_refind(){
   local encrypt=$1 root=$2
-  if $encrypt ; then
-    sed -i "/GRUB_CMDLINE_LINUX=/ c\GRUB_CMDLINE_LINUX=\\\"cryptdevice=${root}:cryptroot:allow-discards\\\"" /mnt/btrfs-current/etc/default/grub
-  fi
   arch-chroot /mnt/btrfs-current modprobe efivars
   arch-chroot /mnt/btrfs-current modprobe dm-mod
   arch-chroot /mnt/btrfs-current refind-install
-  arch-chroot /mnt/btrfs-current refind-mkrlconf
+
+  if $encrypt ; then
+    sed -i '/Boot with standard options/ c\"Boot with standard options" "rw root=/dev/mapper/cryptroot cryptdevice=${root}:cryptroot:allow-discards rootflags=subvol=__root rootfstype=btrfs add_efi_mmap systemd.unit=graphical.target"' /mnt/btrfs-current/boot/refind_linux.conf
+  else
+    sed -i '/Boot with standard options/ c\"Boot with standard options" "rw root=${root} rootflags=subvol=__root rootfstype=btrfs add_efi_mmap systemd.unit=graphical.target"' /mnt/btrfs-current/boot/refind_linux.conf
+  fi
+  #update refind
+  arch-chroot /mnt/btrfs-current refind-install
 }
 
 setup_aur(){
@@ -260,7 +264,7 @@ if $encrypt ; then
 else
   arch-chroot /mnt/btrfs-current mkinitcpio -p linux
 fi
-setup_grub $encrypt $root_raw
+setup_refind $encrypt $root_raw
 setup_aur $proxy
 setup_pacman
 install_base_apps
