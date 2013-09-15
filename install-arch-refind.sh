@@ -293,11 +293,15 @@ fi
 #fi
 
 # manually install efivars
-umount /sys/firmware/efi
-modprobe -r efivars
-modprobe efivars
-modprobe dm-mod
-efibootmgr -q -c -d /dev/sda -p 1 -w -L 'rEFInd' -l '\EFI\refind\refind_x64.efi'
+#umount /sys/firmware/efi
+#modprobe -r efivars
+#modprobe efivars
+#modprobe dm-mod
+arch-chroot /mnt/btrfs-current cp /boot/initramfs*.img /boot/efi/
+arch-chroot /mnt/btrfs-current modprobe efivars
+arch-chroot /mnt/btrfs-current modprobe dm-mod
+arch-chroot /mnt/btrfs-current refind-install --yes
+#efibootmgr -q -c -d /dev/sda -p 1 -w -L 'rEFInd' -l '\EFI\refind\refind_x64.efi'
 
 read -p "umount?(Y/n)?"
 if [[ $REPLY == [nN] ]] ; then
