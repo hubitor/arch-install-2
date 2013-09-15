@@ -110,13 +110,18 @@ setup_refind(){
   arch-chroot /mnt/btrfs-current modprobe dm-mod
   arch-chroot /mnt/btrfs-current refind-install --yes
 
+  #for some reason refind has a bug where it creates an extra line when a PARTUUID exists.  Let's delete it.
+  sed -i '/PARTUUID/d' /mnt/btrfs-current/boot/refind_linux.conf
+
   if $encrypt ; then
-    sed -i '/Boot with standard options/ c\"Boot with standard options" "rw root=/dev/mapper/cryptroot cryptdevice=${root}:cryptroot:allow-discards rootflags=subvol=__root rootfstype=btrfs add_efi_mmap systemd.unit=graphical.target"' /mnt/btrfs-current/boot/refind_linux.conf
+    sed -i '/Boot with standard options/ c\"Boot with standard options" "rw root=/dev/mapper/cryptroot cryptdevice='${root}':cryptroot:allow-discards rootflags=subvol=__root rootfstype=btrfs add_efi_mmap systemd.unit=graphical.target"' /mnt/btrfs-current/boot/refind_linux.conf
+    sed -i '/Boot to single-user mode/ c\"Boot to single-user mode" "rw root=/dev/mapper/cryptroot cryptdevice='${root}':cryptroot:allow-discards rootflags=subvol=__root rootfstype=btrfs add_efi_mmap systemd.unit=graphical.target single"' /mnt/btrfs-current/boot/refind_linux.conf
+    sed -i '/Boot with minimal options/ c\"Boot with minimal options" "rw root=/dev/mapper/cryptroot cryptdevice='${root}':cryptroot:allow-discards rootflags=subvol=__root rootfstype=btrfs add_efi_mmap systemd.unit=graphical.target"' /mnt/btrfs-current/boot/refind_linux.conf
   else
-    sed -i '/Boot with standard options/ c\"Boot with standard options" "rw root=${root} rootflags=subvol=__root rootfstype=btrfs add_efi_mmap systemd.unit=graphical.target"' /mnt/btrfs-current/boot/refind_linux.conf
+    sed -i '/Boot with standard options/ c\"Boot with standard options" "rw root='${root}' rootflags=subvol=__root rootfstype=btrfs add_efi_mmap systemd.unit=graphical.target"' /mnt/btrfs-current/boot/refind_linux.conf
+    sed -i '/Boot to single-user mode/ c\"Boot to single-user mode" "rw root='${root}' rootflags=subvol=__root rootfstype=btrfs add_efi_mmap systemd.unit=graphical.target single"' /mnt/btrfs-current/boot/refind_linux.conf
+    sed -i '/Boot with minimal options/ c\"Boot with minimal options" "rw root='${root}' rootflags=subvol=__root rootfstype=btrfs add_efi_mmap systemd.unit=graphical.target"' /mnt/btrfs-current/boot/refind_linux.conf
   fi
-  #update refind
-  arch-chroot /mnt/btrfs-current refind-install --yes
 }
 
 setup_aur(){
