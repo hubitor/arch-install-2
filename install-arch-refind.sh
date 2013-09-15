@@ -108,7 +108,7 @@ setup_refind(){
   local encrypt=$1 root=$2
   arch-chroot /mnt/btrfs-current modprobe efivars
   arch-chroot /mnt/btrfs-current modprobe dm-mod
-  arch-chroot /mnt/btrfs-current refind-install
+  arch-chroot /mnt/btrfs-current refind-install --yes
 
   if $encrypt ; then
     sed -i '/Boot with standard options/ c\"Boot with standard options" "rw root=/dev/mapper/cryptroot cryptdevice=${root}:cryptroot:allow-discards rootflags=subvol=__root rootfstype=btrfs add_efi_mmap systemd.unit=graphical.target"' /mnt/btrfs-current/boot/refind_linux.conf
@@ -116,7 +116,7 @@ setup_refind(){
     sed -i '/Boot with standard options/ c\"Boot with standard options" "rw root=${root} rootflags=subvol=__root rootfstype=btrfs add_efi_mmap systemd.unit=graphical.target"' /mnt/btrfs-current/boot/refind_linux.conf
   fi
   #update refind
-  arch-chroot /mnt/btrfs-current refind-install
+  arch-chroot /mnt/btrfs-current refind-install --yes
 }
 
 setup_aur(){
