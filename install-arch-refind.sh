@@ -35,28 +35,29 @@ setup_btrfs(){
 
   # setup btrfs layout/subvolumes
   mkdir -p /mnt/btrfs-root/__snapshot
-  btrfs subvolume create /mnt/btrfs-root/__root
+  mkdir -p /mnt/btrfs-root/__current
   for sub in "$@" ; do
-    btrfs subvolume create /mnt/btrfs-root/__root/$sub
+    btrfs subvolume create /mnt/btrfs-root/__current/$sub
   done
 }
 
 mount_subvol(){
-# mount __root and create the mount points for mounting the other subvolumes
+# mount __current/ROOT and create the mount points for mounting the other subvolumes
   local device=$1 ; shift 1
   mkdir -p /mnt/btrfs-current
-  mount -o defaults,relatime,discard,ssd,nodev,compress=lzo,subvol=__root $device /mnt/btrfs-current
+  mount -o defaults,relatime,discard,ssd,nodev,compress=lzo,subvol=__current/ROOT $device /mnt/btrfs-current
+
   # mount the other subvolumes on the corresponding mount points
   for sub in "$@" ; do
 	mkdir -p /mnt/btrfs-current/$sub
-    mount -o defaults,relatime,discard,ssd,nodev,nosuid,compress=lzo,autodefrag,subvol=__root/$sub $device /mnt/btrfs-current/$sub
+    mount -o defaults,relatime,discard,ssd,nodev,nosuid,compress=lzo,autodefrag,subvol=__current/$sub $device /mnt/btrfs-current/$sub
   done
 
   # var/lib is special
-  mkdir -p /mnt/btrfs-root/__root/var/lib
-  mount -o defaults,relatime,discard,ssd,nodev,nosuid,compress=lzo,autodefrag,subvol=__root/var $device /mnt/btrfs-current/var
+  mkdir -p /mnt/btrfs-root/__current/ROOT/var/lib
+  mount -o defaults,relatime,discard,ssd,nodev,nosuid,compress=lzo,autodefrag,subvol=__current/var $device /mnt/btrfs-current/var
   mkdir -p /mnt/btrfs-current/var/lib
-  mount --bind /mnt/btrfs-root/__root/var/lib /mnt/btrfs-current/var/lib
+  mount --bind /mnt/btrfs-root/__current/ROOT/var/lib /mnt/btrfs-current/var/lib
   #pause
 }
 
@@ -72,7 +73,7 @@ setup_boot(){
 
 make_fs(){
   echo "make_fs"
-  setup_btrfs $2 home opt var data
+  setup_btrfs $2 ROOT home opt var data
   mount_subvol $2 home opt data
   setup_boot $1 $3
 }
@@ -83,7 +84,7 @@ bootstrap_arch(){
   genfstab -U -p /mnt/btrfs-current >> /mnt/btrfs-current/etc/fstab
   echo "adding special handling for /var/lib"
   echo "#UUID=...	/run/btrfs-root	btrfs rw,nodev,nosuid,noexec,relatime,ssd,discard,space_cache 0 0" >> /mnt/btrfs-current/etc/fstab
-  echo "#/run/btrfs-root/__root/var/lib		/var/lib	none bind 0 0" >> /mnt/btrfs-current/etc/fstab
+  echo "#/run/btrfs-root/__current/ROOT/var/lib		/var/lib	none bind 0 0" >> /mnt/btrfs-current/etc/fstab
   vi /mnt/btrfs-current/etc/fstab
 
   read -p "hostname:(arch)" hostname
@@ -114,13 +115,13 @@ setup_refind(){
   sed -i '/PARTUUID/d' /mnt/btrfs-current/boot/refind_linux.conf
 
   if $encrypt ; then
-    sed -i '/Boot with standard options/ c\"Boot with standard options" "rw root=/dev/mapper/cryptroot cryptdevice='${root}':cryptroot:allow-discards rootflags=subvol=__root rootfstype=btrfs add_efi_mmap systemd.unit=graphical.target"' /mnt/btrfs-current/boot/refind_linux.conf
-    sed -i '/Boot to single-user mode/ c\"Boot to single-user mode" "rw root=/dev/mapper/cryptroot cryptdevice='${root}':cryptroot:allow-discards rootflags=subvol=__root rootfstype=btrfs add_efi_mmap systemd.unit=graphical.target single"' /mnt/btrfs-current/boot/refind_linux.conf
-    sed -i '/Boot with minimal options/ c\"Boot with minimal options" "rw root=/dev/mapper/cryptroot cryptdevice='${root}':cryptroot:allow-discards rootflags=subvol=__root rootfstype=btrfs add_efi_mmap systemd.unit=graphical.target"' /mnt/btrfs-current/boot/refind_linux.conf
+    sed -i '/Boot with standard options/ c\"Boot with standard options" "rw root=/dev/mapper/cryptroot cryptdevice='${root}':cryptroot:allow-discards rootflags=subvol=__current/ROOT rootfstype=btrfs add_efi_mmap systemd.unit=graphical.target"' /mnt/btrfs-current/boot/refind_linux.conf
+    sed -i '/Boot to single-user mode/ c\"Boot to single-user mode" "rw root=/dev/mapper/cryptroot cryptdevice='${root}':cryptroot:allow-discards rootflags=subvol=__current/ROOT rootfstype=btrfs add_efi_mmap systemd.unit=graphical.target single"' /mnt/btrfs-current/boot/refind_linux.conf
+    sed -i '/Boot with minimal options/ c\"Boot with minimal options" "rw root=/dev/mapper/cryptroot cryptdevice='${root}':cryptroot:allow-discards rootflags=subvol=__current/ROOT rootfstype=btrfs add_efi_mmap systemd.unit=graphical.target"' /mnt/btrfs-current/boot/refind_linux.conf
   else
-    sed -i '/Boot with standard options/ c\"Boot with standard options" "rw root='${root}' rootflags=subvol=__root rootfstype=btrfs add_efi_mmap systemd.unit=graphical.target"' /mnt/btrfs-current/boot/refind_linux.conf
-    sed -i '/Boot to single-user mode/ c\"Boot to single-user mode" "rw root='${root}' rootflags=subvol=__root rootfstype=btrfs add_efi_mmap systemd.unit=graphical.target single"' /mnt/btrfs-current/boot/refind_linux.conf
-    sed -i '/Boot with minimal options/ c\"Boot with minimal options" "rw root='${root}' rootflags=subvol=__root rootfstype=btrfs add_efi_mmap systemd.unit=graphical.target"' /mnt/btrfs-current/boot/refind_linux.conf
+    sed -i '/Boot with standard options/ c\"Boot with standard options" "rw root='${root}' rootflags=subvol=__current/ROOT rootfstype=btrfs add_efi_mmap systemd.unit=graphical.target"' /mnt/btrfs-current/boot/refind_linux.conf
+    sed -i '/Boot to single-user mode/ c\"Boot to single-user mode" "rw root='${root}' rootflags=subvol=__current/ROOT rootfstype=btrfs add_efi_mmap systemd.unit=graphical.target single"' /mnt/btrfs-current/boot/refind_linux.conf
+    sed -i '/Boot with minimal options/ c\"Boot with minimal options" "rw root='${root}' rootflags=subvol=__current/ROOT rootfstype=btrfs add_efi_mmap systemd.unit=graphical.target"' /mnt/btrfs-current/boot/refind_linux.conf
   fi
 }
 
