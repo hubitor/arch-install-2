@@ -158,7 +158,7 @@ mesa xf86-input-synaptics $VIDEO ttf-ubuntu-font-family ttf-liberation ttf-dejav
 
 install_kde(){
   install_x
-  arch-chroot /mnt/btrfs-current pacman -S kde-meta kdm kdeplasma-applets-plasma-nm
+  arch-chroot /mnt/btrfs-current pacman -S kde-meta kdeplasma-applets-plasma-nm network-manager-applet
 }
 
 install_apps(){
