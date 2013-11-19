@@ -166,7 +166,7 @@ install_apps(){
   chromium rdesktop nss vlc bash-completion pm-utils \
   hdparm gvim meld \
   avahi nss-mdns fuse libva-intel-driver ntp deja-dup \
-  cups cronie
+  cups cronie firefox firefox-i18n-en-us arch-firefox-search archlinux-themes-kdm archlinux-wallpaper
 }
 
 setup_users(){
