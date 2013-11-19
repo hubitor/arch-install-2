@@ -156,9 +156,9 @@ install_x(){
 mesa xf86-input-synaptics $VIDEO ttf-ubuntu-font-family ttf-liberation ttf-dejavu xorg-twm xorg-xclock xterm
 }
 
-install_kde(){
+install_gnome(){
   install_x
-  arch-chroot /mnt/btrfs-current pacman -S kde-meta kdeplasma-applets-plasma-nm network-manager-applet
+  arch-chroot /mnt/btrfs-current pacman -S gnome gnome-extra gnome-tweak-tool
 }
 
 install_apps(){
@@ -166,7 +166,7 @@ install_apps(){
   chromium rdesktop nss vlc bash-completion pm-utils \
   hdparm gvim meld \
   avahi nss-mdns fuse libva-intel-driver ntp deja-dup \
-  cups cronie firefox firefox-i18n-en-us arch-firefox-search archlinux-themes-kdm archlinux-wallpaper
+  cups cronie firefox firefox-i18n-en-us arch-firefox-search archlinux-wallpaper
 }
 
 setup_users(){
@@ -185,7 +185,7 @@ setup_users(){
 
 enable_services(){
   # enable systemd stuff
-  arch-chroot /mnt/btrfs-current systemctl enable kdm.service
+  arch-chroot /mnt/btrfs-current systemctl enable gdm.service
   arch-chroot /mnt/btrfs-current systemctl enable NetworkManager.service
   arch-chroot /mnt/btrfs-current systemctl enable cpupower.service
   arch-chroot /mnt/btrfs-current systemctl enable sshd.service
@@ -269,9 +269,9 @@ setup_pacman
 install_base_apps
 setup_users
 
-read -p "kde? (y/N)"
+read -p "gnome? (y/N)"
 if [[ $REPLY == [yY] ]] ; then
-  install_kde
+  install_gnome
   install_apps
   install_aur_pkgs
   enable_services
