@@ -158,13 +158,13 @@ mesa xf86-input-synaptics $VIDEO ttf-ubuntu-font-family ttf-liberation ttf-dejav
 
 install_kde(){
   install_x
-  arch-chroot /mnt/btrfs-current pacman -S --noconfirm kde-meta kdm
+  arch-chroot /mnt/btrfs-current pacman -S kde-meta kdm kdeplasma-applets-plasma-nm
 }
 
 install_apps(){
   arch-chroot /mnt/btrfs-current pacman -S --noconfirm cpupower \
   chromium rdesktop nss vlc bash-completion pm-utils \
-  laptop-mode-tools hdparm gvim meld \
+  hdparm gvim meld \
   avahi nss-mdns fuse libva-intel-driver ntp deja-dup \
   cups cronie
 }
