@@ -170,7 +170,7 @@ install_gnome(){
 
 install_openbox(){
   install_x
-  arch-chroot /mnt/btrfs-current pacman -S openbox lightdm gtk2 lxde
+  arch-chroot /mnt/btrfs-current pacman -S openbox gtk2 lxde
 }
 
 install_apps(){
@@ -197,7 +197,7 @@ setup_users(){
 
 enable_services(){
   # enable systemd stuff
-  arch-chroot /mnt/btrfs-current systemctl enable lightdm.service
+  arch-chroot /mnt/btrfs-current systemctl enable lxdm.service
   arch-chroot /mnt/btrfs-current systemctl enable NetworkManager.service
   arch-chroot /mnt/btrfs-current systemctl enable cpupower.service
   arch-chroot /mnt/btrfs-current systemctl enable sshd.service
