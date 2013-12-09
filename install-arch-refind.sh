@@ -80,7 +80,7 @@ make_fs(){
 
 bootstrap_arch(){
   echo "bootstrap"
-  pacstrap /mnt/btrfs-current base base-devel refind-efi efibootmgr os-prober mtools gptfdisk
+  pacstrap /mnt/btrfs-current base base-devel refind-efi dosfstools efibootmgr os-prober mtools gptfdisk
   genfstab -U -p /mnt/btrfs-current >> /mnt/btrfs-current/etc/fstab
   echo "adding special handling for /var/lib"
   echo "#UUID=...	/run/btrfs-root	btrfs rw,nodev,nosuid,noexec,relatime,ssd,discard,space_cache 0 0" >> /mnt/btrfs-current/etc/fstab
@@ -165,15 +165,20 @@ mesa xf86-input-synaptics $VIDEO ttf-ubuntu-font-family ttf-liberation ttf-dejav
 
 install_gnome(){
   install_x
-  arch-chroot /mnt/btrfs-current pacman -S --noconfirm gnome gnome-extra gnome-tweak-tool gdm
+  arch-chroot /mnt/btrfs-current pacman -S --noconfirm gnome gnome-extra gnome-tweak-tool
+}
+
+install_openbox(){
+  install_x
+  arch-chroot /mnt/btrfs-current pacman -S openbox lightdm gtk2 lxde
 }
 
 install_apps(){
   arch-chroot /mnt/btrfs-current pacman -S --noconfirm cpupower \
   chromium rdesktop nss vlc bash-completion pm-utils \
-  laptop-mode-tools hdparm gvim meld \
+  hdparm gvim meld \
   avahi nss-mdns fuse libva-intel-driver ntp deja-dup \
-  cups cronie
+  cups cronie firefox firefox-i18n-en-us arch-firefox-search archlinux-wallpaper
 }
 
 setup_users(){
@@ -192,13 +197,12 @@ setup_users(){
 
 enable_services(){
   # enable systemd stuff
-  arch-chroot /mnt/btrfs-current systemctl enable gdm.service
+  arch-chroot /mnt/btrfs-current systemctl enable lightdm.service
   arch-chroot /mnt/btrfs-current systemctl enable NetworkManager.service
   arch-chroot /mnt/btrfs-current systemctl enable cpupower.service
   arch-chroot /mnt/btrfs-current systemctl enable sshd.service
   arch-chroot /mnt/btrfs-current systemctl enable ntpd.service
   arch-chroot /mnt/btrfs-current systemctl enable avahi-daemon.service
-  arch-chroot /mnt/btrfs-current systemctl enable laptop-mode.service
   arch-chroot /mnt/btrfs-current systemctl enable cups.service
   arch-chroot /mnt/btrfs-current systemctl enable cronie.service
 }
@@ -206,13 +210,14 @@ enable_services(){
 # get some stuff from aur
 install_aur_pkgs(){
   arch-chroot /mnt/btrfs-current packer -S sublime-text-nightly dropbox lastpass-pocket
+  arch-chroot /mnt/btrfs-current packer -S compton nitrogen tint2 conky xscreensaver
+  arch-chroot /mnt/btrfs-current packer -S obmenu-generator openbox-menu obconf openbox-themes
 }
 install_zramswap(){
   arch-chroot /mnt/btrfs-current packer -S zramswap
   arch-chroot /mnt/btrfs-current systemctl enable zramswap.service
 }
 
-modprobe efivars
 modprobe dm-mod
 
 read -p "proxy? (y/N)?"
@@ -276,9 +281,9 @@ setup_pacman
 install_base_apps
 setup_users
 
-read -p "gnome? (y/N)"
+read -p "openbox? (y/N)"
 if [[ $REPLY == [yY] ]] ; then
-  install_gnome
+  install_openbox
   install_apps
   install_aur_pkgs
   enable_services
@@ -297,10 +302,9 @@ fi
 #modprobe -r efivars
 #modprobe efivars
 #modprobe dm-mod
-arch-chroot /mnt/btrfs-current cp /boot/initramfs*.img /boot/efi/
-arch-chroot /mnt/btrfs-current modprobe efivars
-arch-chroot /mnt/btrfs-current modprobe dm-mod
-arch-chroot /mnt/btrfs-current refind-install --yes
+#arch-chroot /mnt/btrfs-current cp /boot/initramfs*.img /boot/efi/
+#arch-chroot /mnt/btrfs-current modprobe dm-mod
+#arch-chroot /mnt/btrfs-current refind-install --yes
 #efibootmgr -q -c -d /dev/sda -p 1 -w -L 'rEFInd' -l '\EFI\refind\refind_x64.efi'
 
 read -p "umount?(Y/n)?"
