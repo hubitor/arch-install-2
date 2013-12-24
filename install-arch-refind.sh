@@ -14,7 +14,7 @@ pause(){
 refresh_pacman() {
   echo "refresh pacman"
   pacman -Sy
-  pacman -S --noconfirm reflector
+  pacman -S --noconfirm rsync reflector
   reflector -f 6 -l 6 --save /etc/pacman.d/mirrorlist
   pacman -Syy
 }
@@ -143,7 +143,7 @@ setup_aur(){
 }
 
 setup_pacman(){
-  arch-chroot /mnt/btrfs-current pacman -S --noconfirm reflector
+  arch-chroot /mnt/btrfs-current pacman -S --noconfirm rsync reflector
   arch-chroot /mnt/btrfs-current reflector -f 6 -l 6 --save /etc/pacman.d/mirrorlist
   arch-chroot /mnt/btrfs-current packer -S powerpill
   arch-chroot /mnt/btrfs-current pacman -Syy
@@ -151,7 +151,7 @@ setup_pacman(){
 
 install_base_apps(){
   arch-chroot /mnt/btrfs-current pacman -S --noconfirm sudo git gvim curl tmux zsh htop \
- openssh openssl dbus wget bc rsync wireless_tools wpa_supplicant wpa_actiond dialog btrfs-progs
+ openssh openssl dbus wget bc wireless_tools wpa_supplicant wpa_actiond dialog btrfs-progs
 }
 install_x(){
   # install xserver, common stuff
