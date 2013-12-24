@@ -14,7 +14,7 @@ pause(){
 refresh_pacman() {
   echo "refresh pacman"
   pacman -Sy
-  pacman -S --noconfirm reflector
+  pacman -S --noconfirm rsync reflector
   reflector -f 6 -l 6 --save /etc/pacman.d/mirrorlist
   pacman -Syy
 }
@@ -49,7 +49,7 @@ mount_subvol(){
 
   # mount the other subvolumes on the corresponding mount points
   for sub in "$@" ; do
-	mkdir -p /mnt/btrfs-current/$sub
+  mkdir -p /mnt/btrfs-current/$sub
     mount -o defaults,relatime,discard,ssd,nodev,nosuid,compress=lzo,autodefrag,subvol=__current/$sub $device /mnt/btrfs-current/$sub
   done
 
@@ -83,8 +83,8 @@ bootstrap_arch(){
   pacstrap /mnt/btrfs-current base base-devel grub efibootmgr os-prober dosfstools mtools gptfdisk
   genfstab -U -p /mnt/btrfs-current >> /mnt/btrfs-current/etc/fstab
   echo "adding special handling for /var/lib"
-  echo "#UUID=...	/run/btrfs-root	btrfs rw,nodev,nosuid,noexec,relatime,ssd,discard,space_cache 0 0" >> /mnt/btrfs-current/etc/fstab
-  echo "#/run/btrfs-root/__current/ROOT/var/lib		/var/lib	none bind 0 0" >> /mnt/btrfs-current/etc/fstab
+  echo "#UUID=... /run/btrfs-root btrfs rw,nodev,nosuid,noexec,relatime,ssd,discard,space_cache 0 0" >> /mnt/btrfs-current/etc/fstab
+  echo "#/run/btrfs-root/__current/ROOT/var/lib   /var/lib  none bind 0 0" >> /mnt/btrfs-current/etc/fstab
   vi /mnt/btrfs-current/etc/fstab
 
   read -p "hostname:(arch)" hostname
@@ -137,7 +137,7 @@ setup_aur(){
 }
 
 setup_pacman(){
-  arch-chroot /mnt/btrfs-current pacman -S --noconfirm reflector
+  arch-chroot /mnt/btrfs-current pacman -S --noconfirm rsync reflector
   arch-chroot /mnt/btrfs-current reflector -f 6 -l 6 --save /etc/pacman.d/mirrorlist
   arch-chroot /mnt/btrfs-current packer -S powerpill
   arch-chroot /mnt/btrfs-current pacman -Syy
@@ -145,7 +145,7 @@ setup_pacman(){
 
 install_base_apps(){
   arch-chroot /mnt/btrfs-current pacman -S --noconfirm sudo git gvim curl tmux zsh htop \
- openssh openssl dbus wget bc rsync wireless_tools wpa_supplicant wpa_actiond dialog btrfs-progs
+ openssh openssl dbus wget bc wireless_tools wpa_supplicant wpa_actiond dialog btrfs-progs
 }
 install_x(){
   # install xserver, common stuff
@@ -159,12 +159,12 @@ mesa xf86-input-synaptics $VIDEO ttf-ubuntu-font-family ttf-liberation ttf-dejav
 
 install_gnome(){
   install_x
-  arch-chroot /mnt/btrfs-current pacman -S gnome gnome-extra gnome-tweak-tool
+  arch-chroot /mnt/btrfs-current pacman -S --noconfirm gnome gnome-extra gnome-tweak-tool
 }
 
 install_openbox(){
   install_x
-  arch-chroot /mnt/btrfs-current pacman -S openbox  gtk2 lxde
+  arch-chroot /mnt/btrfs-current pacman -S openbox gtk2 lxde
 }
 
 install_apps(){
