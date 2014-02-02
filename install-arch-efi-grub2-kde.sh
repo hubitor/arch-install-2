@@ -108,6 +108,7 @@ add_encrypt_hook(){
 setup_grub(){
   local encrypt=$1 root=$2
   if $encrypt ; then
+    sed -i "/GRUB_CMDLINE_LINUX=/ c\GRUB_CMDLINE_LINUX=\\\"rootflags=subvol=__current/ROOT\\\"" /mnt/btrfs-current/etc/default/grub
     sed -i "/GRUB_CMDLINE_LINUX=/ c\GRUB_CMDLINE_LINUX=\\\"cryptdevice=${root}:cryptroot:allow-discards\\\"" /mnt/btrfs-current/etc/default/grub
   fi
   arch-chroot /mnt/btrfs-current modprobe efivars
@@ -120,20 +121,17 @@ setup_grub(){
 }
 
 setup_aur(){
-  local proxy=$1 tmp_dir=/opt/tmp
+  if [[ "$proxy" == "false" ]] ; then
+  local tmp_dir=/opt/tmp
   mkdir -p /mnt/btrfs-current/$tmp_dir
   wget --no-check-certificate -O /mnt/btrfs-current/$tmp_dir/aur.sh https://raw.github.com/seanvk/arch-install/master/aur.sh
   arch-chroot /mnt/btrfs-current pacman -S --noconfirm expac yajl
-  if $proxy ; then
-    wget --no-check-certificate -O /mnt/btrfs-current/$tmp_dir/cower.tar.gz https://raw.github.com/seanvk/arch-install/master/cower.tar.gz
-    wget --no-check-certificate -O /mnt/btrfs-current/$tmp_dir/packer.tar.gz https://raw.github.com/seanvk/arch-install/master/packer.tar.gz
-  else
-    wget --no-check-certificate -O /mnt/btrfs-current/$tmp_dir/cower.tar.gz https://aur.archlinux.org/packages/co/cower/cower.tar.gz
-    wget --no-check-certificate -O /mnt/btrfs-current/$tmp_dir/packer.tar.gz https://aur.archlinux.org/packages/pa/packer/packer.tar.gz
-  fi
+  wget --no-check-certificate -O /mnt/btrfs-current/$tmp_dir/cower.tar.gz https://aur.archlinux.org/packages/co/cower/cower.tar.gz
+  wget --no-check-certificate -O /mnt/btrfs-current/$tmp_dir/packer.tar.gz https://aur.archlinux.org/packages/pa/packer/packer.tar.gz
   arch-chroot /mnt/btrfs-current sh $tmp_dir/aur.sh cower
   arch-chroot /mnt/btrfs-current sh $tmp_dir/aur.sh packer
   rm -r /mnt/btrfs-current/$tmp_dir
+  fi
 }
 
 setup_pacman(){
@@ -158,12 +156,10 @@ mesa xf86-input-synaptics $VIDEO ttf-ubuntu-font-family ttf-liberation ttf-dejav
 }
 
 install_kde(){
-  install_x
-  arch-chroot /mnt/btrfs-current pacman -S --noconfirm kde-meta
+  arch-chroot /mnt/btrfs-current pacman -S --noconfirm kde-meta kdeplasma-applets-plasma-nm network-manager-applet
 }
 
 install_openbox(){
-  install_x
   arch-chroot /mnt/btrfs-current pacman -S openbox gtk2 lxde
 }
 
@@ -282,6 +278,7 @@ setup_users
 
 read -p "KDE/openbox? (y/N)"
 if [[ $REPLY == [yY] ]] ; then
+  install_x
   install_openbox
   install_kde
   install_apps
