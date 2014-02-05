@@ -108,6 +108,7 @@ add_encrypt_hook(){
 setup_grub(){
   local encrypt=$1 root=$2
   if $encrypt ; then
+    sed -i "/GRUB_CMDLINE_LINUX=/ c\GRUB_CMDLINE_LINUX=\\\"rootflags=subvol=__current/ROOT\\\"" /mnt/btrfs-current/etc/default/grub
     sed -i "/GRUB_CMDLINE_LINUX=/ c\GRUB_CMDLINE_LINUX=\\\"cryptdevice=${root}:cryptroot:allow-discards\\\"" /mnt/btrfs-current/etc/default/grub
   fi
   arch-chroot /mnt/btrfs-current modprobe efivars
@@ -120,20 +121,17 @@ setup_grub(){
 }
 
 setup_aur(){
-  local proxy=$1 tmp_dir=/opt/tmp
+  if [[ "$proxy" == "false" ]] ; then
+  local tmp_dir=/opt/tmp
   mkdir -p /mnt/btrfs-current/$tmp_dir
   wget --no-check-certificate -O /mnt/btrfs-current/$tmp_dir/aur.sh https://raw.github.com/seanvk/arch-install/master/aur.sh
   arch-chroot /mnt/btrfs-current pacman -S --noconfirm expac yajl
-  if $proxy ; then
-    wget --no-check-certificate -O /mnt/btrfs-current/$tmp_dir/cower.tar.gz https://raw.github.com/seanvk/arch-install/master/cower.tar.gz
-    wget --no-check-certificate -O /mnt/btrfs-current/$tmp_dir/packer.tar.gz https://raw.github.com/seanvk/arch-install/master/packer.tar.gz
-  else
-    wget --no-check-certificate -O /mnt/btrfs-current/$tmp_dir/cower.tar.gz https://aur.archlinux.org/packages/co/cower/cower.tar.gz
-    wget --no-check-certificate -O /mnt/btrfs-current/$tmp_dir/packer.tar.gz https://aur.archlinux.org/packages/pa/packer/packer.tar.gz
-  fi
+  wget --no-check-certificate -O /mnt/btrfs-current/$tmp_dir/cower.tar.gz https://aur.archlinux.org/packages/co/cower/cower.tar.gz
+  wget --no-check-certificate -O /mnt/btrfs-current/$tmp_dir/packer.tar.gz https://aur.archlinux.org/packages/pa/packer/packer.tar.gz
   arch-chroot /mnt/btrfs-current sh $tmp_dir/aur.sh cower
   arch-chroot /mnt/btrfs-current sh $tmp_dir/aur.sh packer
   rm -r /mnt/btrfs-current/$tmp_dir
+  fi
 }
 
 setup_pacman(){
@@ -144,8 +142,9 @@ setup_pacman(){
 }
 
 install_base_apps(){
-  arch-chroot /mnt/btrfs-current pacman -S --noconfirm sudo git gvim curl tmux zsh htop \
+  arch-chroot /mnt/btrfs-current pacman -S --noconfirm sudo git vim curl tmux zsh htop \
  openssh openssl dbus wget bc wireless_tools wpa_supplicant wpa_actiond dialog btrfs-progs
+ arch-chroot /mnt/btrfs-current pacman -S --noconfirm xdg-user-dirs
 }
 install_x(){
   # install xserver, common stuff
@@ -154,25 +153,39 @@ install_x(){
     VIDEO='xf86-video-intel'
   fi
   arch-chroot /mnt/btrfs-current pacman -S --noconfirm xorg-server xorg-server-utils xorg-xinit \
-mesa xf86-input-synaptics $VIDEO ttf-ubuntu-font-family ttf-liberation ttf-dejavu xorg-twm xorg-xclock xterm
+mesa xf86-input-synaptics $VIDEO ttf-ubuntu-font-family ttf-liberation ttf-dejavu
+}
+
+install_kde(){
+  arch-chroot /mnt/btrfs-current pacman -S --noconfirm kde-meta kdeplasma-applets-plasma-nm network-manager-applet
+  arch-chroot /mnt/btrfs-current systemctl disable gdm.service
+  arch-chroot /mnt/btrfs-current systemctl enable kdm.service
 }
 
 install_gnome(){
-  install_x
   arch-chroot /mnt/btrfs-current pacman -S --noconfirm gnome gnome-extra gnome-tweak-tool
+  arch-chroot /mnt/btrfs-current systemctl disable kdm.service
+  arch-chroot /mnt/btrfs-current systemctl enable gdm.service
 }
 
-install_openbox(){
-  install_x
-  arch-chroot /mnt/btrfs-current pacman -S openbox gtk2 lxde
-}
 
 install_apps(){
+  
   arch-chroot /mnt/btrfs-current pacman -S --noconfirm cpupower \
-  chromium rdesktop nss vlc bash-completion pm-utils \
-  hdparm gvim meld \
-  avahi nss-mdns fuse libva-intel-driver ntp deja-dup \
+  rdesktop nss bash-completion elinks weechat dhclient
+  
+  arch-chroot /mnt/btrfs-current pacman -S --noconfirm \
+  gvim netkit-bsd-finger alsa-utils dnsutils rfkill offlineimap
+  
+  arch-chroot /mnt/btrfs-current pacman -S --noconfirm avahi nss-mdns \
+  fuse libva-intel-driver ntp deja-dup python2-pyopenssl cracklib keychain
+  
+  arch-chroot /mnt/btrfs-current pacman -S --noconfirm \
   cups cronie firefox firefox-i18n-en-us arch-firefox-search archlinux-wallpaper
+  
+  arch-chroot /mnt/btrfs-current pacman -S --noconfirm openbsd-netcat tsocks linux-headers \
+  dkms mercurial archlinux-themes-kdm
+ 
 }
 
 setup_users(){
@@ -191,7 +204,6 @@ setup_users(){
 
 enable_services(){
   # enable systemd stuff
-  arch-chroot /mnt/btrfs-current systemctl enable lxdm.service
   arch-chroot /mnt/btrfs-current systemctl enable NetworkManager.service
   arch-chroot /mnt/btrfs-current systemctl enable cpupower.service
   arch-chroot /mnt/btrfs-current systemctl enable sshd.service
@@ -204,8 +216,7 @@ enable_services(){
 # get some stuff from aur
 install_aur_pkgs(){
   arch-chroot /mnt/btrfs-current packer -S sublime-text-nightly dropbox lastpass-pocket
-  arch-chroot /mnt/btrfs-current packer -S compton nitrogen tint2 conky xscreensaver
-  arch-chroot /mnt/btrfs-current packer -S obmenu-generator openbox-menu obconf openbox-themes
+  arch-chroot /mnt/btrfs-current packer -S mutt-patched python-zsi vcsh myrepos
 }
 install_zramswap(){
   arch-chroot /mnt/btrfs-current packer -S zramswap
@@ -276,9 +287,16 @@ setup_pacman
 install_base_apps
 setup_users
 
-read -p "openbox? (y/N)"
+read -p "Install a desktop environment? (y/N)"
 if [[ $REPLY == [yY] ]] ; then
-  install_openbox
+  read -p "Install gnome? (y/N)"
+  if [[ $REPLY == [yY] ]] ; then
+    install_gnome
+  fi
+  read -p "Install kde? (y/N)"
+  if [[ $REPLY == [yY] ]] ; then
+    install_kde
+  fi
   install_apps
   install_aur_pkgs
   enable_services
