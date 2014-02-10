@@ -157,7 +157,7 @@ mesa xf86-input-synaptics $VIDEO ttf-ubuntu-font-family ttf-liberation ttf-dejav
 }
 
 install_kde(){
-  arch-chroot /mnt/btrfs-current pacman -S --noconfirm kde-meta kdeplasma-applets-plasma-nm network-manager-applet
+  arch-chroot /mnt/btrfs-current pacman -S --noconfirm kde-meta kdeplasma-applets-plasma-nm network-manager-applet kdiff3
   arch-chroot /mnt/btrfs-current systemctl disable gdm.service
   arch-chroot /mnt/btrfs-current systemctl enable kdm.service
 }
@@ -181,10 +181,10 @@ install_apps(){
   fuse libva-intel-driver ntp deja-dup python2-pyopenssl cracklib keychain
   
   arch-chroot /mnt/btrfs-current pacman -S --noconfirm \
-  cups cronie firefox firefox-i18n-en-us arch-firefox-search archlinux-wallpaper
+  cups ghostscript gsfonts libcups cronie firefox firefox-i18n-en-us arch-firefox-search archlinux-wallpaper
   
   arch-chroot /mnt/btrfs-current pacman -S --noconfirm openbsd-netcat tsocks linux-headers \
-  dkms mercurial archlinux-themes-kdm
+  dkms mercurial archlinux-themes-kdm gnupg
  
 }
 
@@ -289,6 +289,7 @@ setup_users
 
 read -p "Install a desktop environment? (y/N)"
 if [[ $REPLY == [yY] ]] ; then
+  install_x
   read -p "Install gnome? (y/N)"
   if [[ $REPLY == [yY] ]] ; then
     install_gnome
