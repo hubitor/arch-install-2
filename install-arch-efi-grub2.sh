@@ -108,8 +108,9 @@ add_encrypt_hook(){
 setup_grub(){
   local encrypt=$1 root=$2
   if $encrypt ; then
-    sed -i "/GRUB_CMDLINE_LINUX=/ c\GRUB_CMDLINE_LINUX=\\\"rootflags=subvol=__current/ROOT\\\"" /mnt/btrfs-current/etc/default/grub
     sed -i "/GRUB_CMDLINE_LINUX=/ c\GRUB_CMDLINE_LINUX=\\\"cryptdevice=${root}:cryptroot:allow-discards\\\"" /mnt/btrfs-current/etc/default/grub
+  else
+    sed -i "/GRUB_CMDLINE_LINUX=/ c\GRUB_CMDLINE_LINUX=\\\"rootflags=subvol=__current/ROOT\\\"" /mnt/btrfs-current/etc/default/grub
   fi
   arch-chroot /mnt/btrfs-current modprobe efivars
   arch-chroot /mnt/btrfs-current modprobe dm-mod
