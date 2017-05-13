@@ -1,7 +1,6 @@
 #!/bin/bash
 #
-# based on https://gist.github.com/sch1zo/5653983
-# with input from http://blog.fabio.mancinelli.me/2012/12/28/Arch_Linux_on_BTRFS.html
+#
 #
 tmp=`dirname $0`
 BASE=`realpath $tmp/..`
@@ -32,7 +31,7 @@ setup_btrfs(){
   mkfs.btrfs -f -L "ArchLinux" $device
   mkdir /mnt/btrfs-root
   mount -o defaults,relatime,discard,ssd,compress=lzo,autodefrag $device /mnt/btrfs-root
-
+  
   # setup btrfs layout/subvolumes
   mkdir -p /mnt/btrfs-root/__snapshot
   mkdir -p /mnt/btrfs-root/__current
@@ -71,10 +70,24 @@ setup_boot(){
   mount $2 /mnt/btrfs-current/boot/efi
 }
 
+setup_home(){
+  # format and mount /home
+  mkfs.xfs $1
+  mkdir -p /mnt/btrfs-current/home
+  mount $1 /mnt/btrfs-current/home
+}
+
+
 make_fs(){
   echo "make_fs"
-  setup_btrfs $3 ROOT home opt var data
-  mount_subvol $3 home opt data
+  if $homedev ; then
+    setup_btrfs $3 ROOT opt var data
+    mount_subvol $3 opt data
+    setup_home $4
+  else
+    setup_btrfs $3 ROOT home opt var data
+    mount_subvol $3 home opt data
+  fi
   setup_boot $1 $2
 }
 
@@ -96,7 +109,7 @@ bootstrap_arch(){
   vi /mnt/btrfs-current/etc/locale.gen
   arch-chroot /mnt/btrfs-current locale-gen
   echo LANG=en_US.UTF-8 > /mnt/btrfs-current/etc/locale.conf
-  arch-chroot /mnt/btrfs-current ln -s /usr/share/zoneinfo/America/Los_Angeles /etc/localtime
+  arch-chroot /mnt/btrfs-current ln -sf /usr/share/zoneinfo/America/Los_Angeles /etc/localtime
   arch-chroot /mnt/btrfs-current hwclock --systohc --utc
 }
 
@@ -121,25 +134,9 @@ setup_grub(){
   arch-chroot /mnt/btrfs-current cp /boot/efi/EFI/arch_grub/grubx64.efi /boot/efi/EFI/boot/bootx64.efi
 }
 
-setup_aur(){
-  if [[ "$proxy" == "false" ]] ; then
-  local tmp_dir=/opt/tmp
-  mkdir -p /mnt/btrfs-current/$tmp_dir
-  wget --no-check-certificate -O /mnt/btrfs-current/$tmp_dir/aur.sh https://raw.github.com/seanvk/arch-install/master/aur.sh
-  arch-chroot /mnt/btrfs-current pacman -S --noconfirm expac yajl
-  gpg --recv-keys --keyserver hkp://pgp.mit.edu 1EB2638FF56C0C53
-  wget --no-check-certificate -O /mnt/btrfs-current/$tmp_dir/cower.tar.gz https://aur.archlinux.org/cgit/aur.git/snapshot/cower.tar.gz
-  wget --no-check-certificate -O /mnt/btrfs-current/$tmp_dir/pacaur.tar.gz https://aur.archlinux.org/cgit/aur.git/snapshot/pacaur.tar.gz
-  arch-chroot /mnt/btrfs-current sh $tmp_dir/aur.sh cower
-  arch-chroot /mnt/btrfs-current sh $tmp_dir/aur.sh pacaur
-  rm -r /mnt/btrfs-current/$tmp_dir
-  fi
-}
-
 setup_pacman(){
   arch-chroot /mnt/btrfs-current pacman -S --noconfirm rsync reflector
   arch-chroot /mnt/btrfs-current reflector -f 6 -l 6 --save /etc/pacman.d/mirrorlist
-  arch-chroot /mnt/btrfs-current pacaur -Sy powerpill
   arch-chroot /mnt/btrfs-current pacman -Syy
 }
 
@@ -148,32 +145,8 @@ install_base_apps(){
  openssh openssl dbus wget bc wireless_tools wpa_supplicant wpa_actiond dialog btrfs-progs
  arch-chroot /mnt/btrfs-current pacman -S --noconfirm xdg-user-dirs
 }
-install_x(){
-  # install xserver, common stuff
-  read -p "video-driver(xf86-video-intel)" VIDEO
-  if [[ -z "$VIDEO" ]]; then
-    VIDEO='xf86-video-intel'
-  fi
-  arch-chroot /mnt/btrfs-current pacman -S --noconfirm xorg-server xorg-xinit \
-mesa xf86-input-synaptics $VIDEO adobe-source-sans-pro-fonts ttf-ubuntu-font-family ttf-liberation ttf-dejavu
-}
 
-install_kde(){
-  arch-chroot /mnt/btrfs-current pacman -S --noconfirm kde-meta kdeplasma-applets-plasma-nm network-manager-applet kdiff3
-  arch-chroot /mnt/btrfs-current systemctl disable gdm.service
-  arch-chroot /mnt/btrfs-current systemctl enable kdm.service
-}
-
-install_gnome(){
-  arch-chroot /mnt/btrfs-current pacman -S --noconfirm gnome gnome-extra gnome-tweak-tool
-  arch-chroot /mnt/btrfs-current pacman -S --noconfirm numix-themes breeze-icons
-  arch-chroot /mnt/btrfs-current pacman -S --noconfirm libreoffice-fresh gimp
-  arch-chroot /mnt/btrfs-current systemctl disable kdm.service
-  arch-chroot /mnt/btrfs-current systemctl enable gdm.service
-}
-
-
-install_apps(){
+install_extra_apps(){
   
   arch-chroot /mnt/btrfs-current pacman -S --noconfirm cpupower \
   rdesktop nss bash-completion elinks weechat dhclient
@@ -182,13 +155,13 @@ install_apps(){
   gvim netkit-bsd-finger alsa-utils dnsutils rfkill offlineimap
   
   arch-chroot /mnt/btrfs-current pacman -S --noconfirm avahi nss-mdns \
-  fuse exfat-utils libva-intel-driver ntp acpid deja-dup python2-pyopenssl cracklib keychain
+  fuse exfat-utils libva-intel-driver ntp acpid python2-pyopenssl cracklib keychain
   
   arch-chroot /mnt/btrfs-current pacman -S --noconfirm \
-  cups ghostscript gsfonts libcups cronie firefox firefox-i18n-en-us arch-firefox-search archlinux-wallpaper
+  cups ghostscript gsfonts libcups cronie
   
   arch-chroot /mnt/btrfs-current pacman -S --noconfirm openbsd-netcat tsocks linux-headers \
-  dkms mercurial archlinux-themes-kdm gnupg
+  dkms mercurial gnupg
  
 }
 
@@ -217,16 +190,6 @@ enable_services(){
   arch-chroot /mnt/btrfs-current systemctl enable org.cups.cupsd.service
   arch-chroot /mnt/btrfs-current systemctl enable cups.service
   arch-chroot /mnt/btrfs-current systemctl enable cronie.service
-}
-
-# get some stuff from aur
-install_aur_pkgs(){
-  arch-chroot /mnt/btrfs-current pacaur -Sy sublime-text-dev ttf-ms-fonts
-  arch-chroot /mnt/btrfs-current pacaur -Sy mutt-patched python-zsi
-}
-install_zramswap(){
-  arch-chroot /mnt/btrfs-current pacaur -Sy zramswap
-  arch-chroot /mnt/btrfs-current systemctl enable zramswap.service
 }
 
 modprobe efivars
@@ -264,6 +227,20 @@ if [[ -z "$root_device" ]]; then
 fi
 root_raw=$root_device
 
+homedev=false
+read -p "Separate home device? (y/N)?"
+if [[ $REPLY == [yY] ]] ; then
+  echo "use home device"
+  homedev=true
+fi
+
+if $homedev ; then
+read -p "home device(/dev/sdb1):" home_device
+if [[ -z "$home_device" ]]; then
+  home_device='/dev/sdb1'
+fi
+fi
+
 read -p "encrypt? (y/N)?"
 if [[ $REPLY == [yY] ]] ; then
   echo "use encrypt"
@@ -279,7 +256,7 @@ if $encrypt ; then
 fi
 echo "boot: $boot_device | root: $root_device"
 
-make_fs $efi_device $boot_device $root_device
+make_fs $efi_device $boot_device $root_device $home_device
 refresh_pacman
 bootstrap_arch
 if $encrypt ; then
@@ -288,42 +265,13 @@ else
   arch-chroot /mnt/btrfs-current mkinitcpio -p linux
 fi
 setup_grub $encrypt $root_raw
-setup_aur $proxy
 setup_pacman
 install_base_apps
+install_extra_apps
 setup_users
 
-read -p "Install a desktop environment? (y/N)"
-if [[ $REPLY == [yY] ]] ; then
-  install_x
-  read -p "Install gnome? (y/N)"
-  if [[ $REPLY == [yY] ]] ; then
-    install_gnome
-  fi
-  read -p "Install kde? (y/N)"
-  if [[ $REPLY == [yY] ]] ; then
-    install_kde
-  fi
-  install_apps
-  install_aur_pkgs
-  enable_services
-else
-  arch-chroot /mnt/btrfs-current systemctl enable sshd.service
-  arch-chroot /mnt/btrfs-current systemctl enable dhcpcd.service
-fi
-
-#read -p "zramswap? (y/N)?"
-#if [[ $REPLY == [yY] ]] ; then
-#  install_zramswap
-#fi
-
-# manually install efivars
-#pause
-#umount /sys/firmware/efi
-#modprobe -r efivars
-#modprobe efivars
-#modprobe dm-mod
-#efibootmgr -q -c -d /dev/sda -p 1 -w -L arch_grub -l '\EFI\arch_grub\grubx64.efi'
+arch-chroot /mnt/btrfs-current systemctl enable sshd.service
+arch-chroot /mnt/btrfs-current systemctl enable dhcpcd.service
 
 read -p "umount?(Y/n)?"
 if [[ $REPLY == [nN] ]] ; then
