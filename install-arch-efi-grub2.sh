@@ -73,9 +73,9 @@ setup_boot(){
 
 make_fs(){
   echo "make_fs"
-  setup_btrfs $2 ROOT home opt var data
-  mount_subvol $2 home opt data
-  setup_boot $1 $3
+  setup_btrfs $3 ROOT home opt var data
+  mount_subvol $3 home opt data
+  setup_boot $1 $2
 }
 
 bootstrap_arch(){
@@ -127,10 +127,11 @@ setup_aur(){
   mkdir -p /mnt/btrfs-current/$tmp_dir
   wget --no-check-certificate -O /mnt/btrfs-current/$tmp_dir/aur.sh https://raw.github.com/seanvk/arch-install/master/aur.sh
   arch-chroot /mnt/btrfs-current pacman -S --noconfirm expac yajl
-  wget --no-check-certificate -O /mnt/btrfs-current/$tmp_dir/cower.tar.gz https://aur.archlinux.org/packages/co/cower/cower.tar.gz
-  wget --no-check-certificate -O /mnt/btrfs-current/$tmp_dir/packer.tar.gz https://aur.archlinux.org/packages/pa/packer/packer.tar.gz
+  gpg --recv-keys --keyserver hkp://pgp.mit.edu 1EB2638FF56C0C53
+  wget --no-check-certificate -O /mnt/btrfs-current/$tmp_dir/cower.tar.gz https://aur.archlinux.org/cgit/aur.git/snapshot/cower.tar.gz
+  wget --no-check-certificate -O /mnt/btrfs-current/$tmp_dir/pacaur.tar.gz https://aur.archlinux.org/cgit/aur.git/snapshot/pacaur.tar.gz
   arch-chroot /mnt/btrfs-current sh $tmp_dir/aur.sh cower
-  arch-chroot /mnt/btrfs-current sh $tmp_dir/aur.sh packer
+  arch-chroot /mnt/btrfs-current sh $tmp_dir/aur.sh pacaur
   rm -r /mnt/btrfs-current/$tmp_dir
   fi
 }
@@ -138,7 +139,7 @@ setup_aur(){
 setup_pacman(){
   arch-chroot /mnt/btrfs-current pacman -S --noconfirm rsync reflector
   arch-chroot /mnt/btrfs-current reflector -f 6 -l 6 --save /etc/pacman.d/mirrorlist
-  arch-chroot /mnt/btrfs-current packer -S powerpill
+  arch-chroot /mnt/btrfs-current pacaur -Sy powerpill
   arch-chroot /mnt/btrfs-current pacman -Syy
 }
 
@@ -153,8 +154,8 @@ install_x(){
   if [[ -z "$VIDEO" ]]; then
     VIDEO='xf86-video-intel'
   fi
-  arch-chroot /mnt/btrfs-current pacman -S --noconfirm xorg-server xorg-server-utils xorg-xinit \
-mesa xf86-input-synaptics $VIDEO ttf-ubuntu-font-family ttf-liberation ttf-dejavu
+  arch-chroot /mnt/btrfs-current pacman -S --noconfirm xorg-server xorg-xinit \
+mesa xf86-input-synaptics $VIDEO adobe-source-sans-pro-fonts ttf-ubuntu-font-family ttf-liberation ttf-dejavu
 }
 
 install_kde(){
@@ -165,6 +166,8 @@ install_kde(){
 
 install_gnome(){
   arch-chroot /mnt/btrfs-current pacman -S --noconfirm gnome gnome-extra gnome-tweak-tool
+  arch-chroot /mnt/btrfs-current pacman -S --noconfirm numix-themes breeze-icons
+  arch-chroot /mnt/btrfs-current pacman -S --noconfirm libreoffice-fresh gimp
   arch-chroot /mnt/btrfs-current systemctl disable kdm.service
   arch-chroot /mnt/btrfs-current systemctl enable gdm.service
 }
@@ -179,7 +182,7 @@ install_apps(){
   gvim netkit-bsd-finger alsa-utils dnsutils rfkill offlineimap
   
   arch-chroot /mnt/btrfs-current pacman -S --noconfirm avahi nss-mdns \
-  fuse libva-intel-driver ntp deja-dup python2-pyopenssl cracklib keychain
+  fuse exfat-utils libva-intel-driver ntp acpid deja-dup python2-pyopenssl cracklib keychain
   
   arch-chroot /mnt/btrfs-current pacman -S --noconfirm \
   cups ghostscript gsfonts libcups cronie firefox firefox-i18n-en-us arch-firefox-search archlinux-wallpaper
@@ -208,19 +211,21 @@ enable_services(){
   arch-chroot /mnt/btrfs-current systemctl enable NetworkManager.service
   arch-chroot /mnt/btrfs-current systemctl enable cpupower.service
   arch-chroot /mnt/btrfs-current systemctl enable sshd.service
+  arch-chroot /mnt/btrfs-current systemctl enable acpid.service
   arch-chroot /mnt/btrfs-current systemctl enable ntpd.service
   arch-chroot /mnt/btrfs-current systemctl enable avahi-daemon.service
+  arch-chroot /mnt/btrfs-current systemctl enable org.cups.cupsd.service
   arch-chroot /mnt/btrfs-current systemctl enable cups.service
   arch-chroot /mnt/btrfs-current systemctl enable cronie.service
 }
 
 # get some stuff from aur
 install_aur_pkgs(){
-  arch-chroot /mnt/btrfs-current packer -S sublime-text-nightly dropbox lastpass-pocket
-  arch-chroot /mnt/btrfs-current packer -S mutt-patched python-zsi vcsh myrepos
+  arch-chroot /mnt/btrfs-current pacaur -Sy sublime-text-dev ttf-ms-fonts
+  arch-chroot /mnt/btrfs-current pacaur -Sy mutt-patched python-zsi
 }
 install_zramswap(){
-  arch-chroot /mnt/btrfs-current packer -S zramswap
+  arch-chroot /mnt/btrfs-current pacaur -Sy zramswap
   arch-chroot /mnt/btrfs-current systemctl enable zramswap.service
 }
 
@@ -274,7 +279,7 @@ if $encrypt ; then
 fi
 echo "boot: $boot_device | root: $root_device"
 
-make_fs $boot_device $root_device $efi_device
+make_fs $efi_device $boot_device $root_device
 refresh_pacman
 bootstrap_arch
 if $encrypt ; then
