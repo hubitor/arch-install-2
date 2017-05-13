@@ -4,5 +4,5 @@ TMP_DIR=/opt/tmp
 cd $TMP_DIR
 tar -xvzf $1.tar.gz
 cd $1
-makepkg -f --noconfirm -si
+sudo -u nobody makepkg -f --noconfirm -si
 
