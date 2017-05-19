@@ -62,12 +62,12 @@ mount_subvol(){
 
 setup_boot(){
   # format and mount /boot
-  mkfs.ext4 $1
-  mkfs.vfat -F32 $2
+  mkfs.vfat -F32 $1
+  mkfs.ext4 $2
   mkdir -p /mnt/btrfs-current/boot
-  mount $1 /mnt/btrfs-current/boot 
+  mount $2 /mnt/btrfs-current/boot 
   mkdir -p /mnt/btrfs-current/boot/efi
-  mount $2 /mnt/btrfs-current/boot/efi
+  mount $1 /mnt/btrfs-current/boot/efi
 }
 
 setup_home(){
